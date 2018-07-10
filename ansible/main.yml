@@ -1,0 +1,19 @@
+---
+- hosts: all
+  become: yes
+  gather_facts: yes
+
+  pre_tasks:
+    - name: Ensure Ansible dependencies are installed.
+      yum: name=libselinux-python state=installed
+
+    - name: Ensure Ansible dependencies are installed.
+      yum: name=libselinux-python state=installed
+
+  vars:
+      virtualbox_version: 5.2.12
+      virtualbox_iso: /home/vagrant/VBoxGuestAdditions.iso
+
+  roles:
+    - { role: peru.vmwaretools, when: ansible_virtualization_type  == "VMware" }
+    - { role: vhubertngi.ansible_role_virtualbox_guest, when: ansible_virtualization_type  == "virtualbox" }

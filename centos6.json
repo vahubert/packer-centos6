@@ -1,0 +1,164 @@
+{
+  "variables": [
+    {
+      "iso_url": "http://mirrors.liquidweb.com/CentOS/6.9/isos/x86_64/CentOS-6.9-x86_64-minimal.iso",
+      "iso_checksum_type": "sha256",
+      "iso_checksum": "422af57b493b8af49d485885a730c5a1d955f803fac85aa51311c393168b9080",
+      "cloud_token": "",
+      "version": ""
+    }
+  ],
+  "builders": [
+    {
+      "name": "hyperv1",
+      "type": "hyperv-iso",
+      "vm_name": "packer-centos6-x86-64",
+      "temp_path": ".",
+      "iso_url": "{{ user `iso_url` }}",
+      "iso_checksum_type": "{{user `iso_checksum_type`}}",
+      "iso_checksum": "{{user `iso_checksum`}}",
+      "disk_size": "16000",
+      "disk_block_size": "1",
+      "communicator": "ssh",
+      "ssh_username": "vagrant",
+      "ssh_password": "vagrant",
+      "ssh_timeout" : "4h",
+      "shutdown_timeout": "30m",
+      "shutdown_command": "echo 'vagrant' | sudo -S shutdown -P now",
+      "ram_size": 2048,
+      "enable_dynamic_memory": "true",
+      "cpu": 2,
+      "generation": 1,
+      "http_directory": "http",
+      "boot_wait": "5s",
+      "switch_name":"packer-hyperv-iso",
+      "boot_command": [
+        "<tab> text ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ks-hyperv.cfg<enter><wait>"
+      ],
+      "guest_additions_mode":"disable",
+      "enable_secure_boot": false,
+      "headless": false
+    },
+    {
+      "type": "vmware-iso",
+      "vm_name": "packer-centos6-x86_64",
+
+      "guest_os_type": "rhel6-64",
+      "tools_upload_flavor": "linux",
+
+      "headless": false,
+
+      "vmx_data": {
+        "cpuid.coresPerSocket": "1",
+        "ethernet0.pciSlotNumber": "32",
+        "memsize": "2048",
+        "numvcpus": "4"
+      },
+
+      "vnc_disable_password": true,
+      "vnc_port_min": 5900,
+      "vnc_port_max": 5905,
+
+      "iso_url": "{{user `iso_url`}}",
+      "iso_checksum_type": "{{user `iso_checksum_type`}}",
+      "iso_checksum": "{{user `iso_checksum`}}",
+
+      "boot_wait": "10s",
+      "boot_command": [
+        "<tab> text ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ks.cfg<enter><wait>"
+      ],
+      "http_directory": "http",
+      "ssh_port": 22,
+      "ssh_username": "vagrant",
+      "ssh_password": "vagrant",
+      "ssh_wait_timeout": "30m",
+      "shutdown_command": "echo 'vagrant' | sudo -S /sbin/halt -h -p",
+      "vmx_remove_ethernet_interfaces": "true",
+      "disk_size": 16000
+
+    },
+    {
+      "type": "virtualbox-iso",
+      "vm_name": "packer-centos6-x86_64",
+
+      "guest_os_type": "RedHat_64",
+
+      "headless": false,
+      "virtualbox_version_file": ".vbox_version",
+      "vboxmanage": [
+        [
+          "modifyvm",
+          "{{.Name}}",
+          "--memory",
+          "4096"
+        ],
+        [
+          "modifyvm",
+          "{{.Name}}",
+          "--cpus",
+          "4"
+        ]
+      ],
+
+      "iso_url": "{{user `iso_url`}}",
+      "iso_checksum_type": "{{user `iso_checksum_type`}}",
+      "iso_checksum": "{{user `iso_checksum`}}",
+
+      "boot_wait": "10s",
+      "boot_command": [
+        "<tab> text ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ks.cfg<enter><wait>"
+      ],
+      "http_directory": "http",
+      "ssh_port": 22,
+      "ssh_username": "vagrant",
+      "ssh_password": "vagrant",
+      "ssh_wait_timeout": "30m",
+      "shutdown_command": "echo 'vagrant' | sudo -S /sbin/halt -h -p",
+      "disk_size": 16000
+
+    }
+
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "execute_command": "echo 'vagrant' | {{.Vars}} sudo -S -E bash '{{.Path}}'",
+      "script": "scripts/ansible.sh"
+    },
+    {
+      "type": "ansible-local",
+      "playbook_file": "ansible/main.yml",
+      "galaxy_file": "requirements.yml"
+    },
+    {
+      "type": "shell",
+      "execute_command": "echo 'vagrant' | {{.Vars}} sudo -S -E bash '{{.Path}}'",
+      "script": "scripts/vagrant.sh"
+    },
+    {
+      "type": "shell",
+      "execute_command": "echo 'vagrant' | {{.Vars}} sudo -S -E bash '{{.Path}}'",
+      "script": "scripts/cleanup_network.sh"
+    },
+    {
+      "type": "shell",
+      "execute_command": "echo 'vagrant' | {{.Vars}} sudo -S -E bash '{{.Path}}'",
+      "script": "scripts/cleanup.sh"
+    }
+  ],
+  "post-processors": [
+    [
+      {
+        "type": "vagrant",
+        "output": "builds/{{.Provider}}-centos6.box",
+        "vagrantfile_template": "Vagrantfile.tpl"
+      },
+      {
+        "type": "vagrant-cloud",
+        "box_tag": "vhubert/centos6",
+        "access_token": "{{user `cloud_token`}}",
+        "version": "{{user `version`}}"
+      }
+    ]
+  ]
+}
